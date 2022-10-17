@@ -1,3 +1,13 @@
+# A Proof of Concept for a hypothetical attack on Notional Finance's smart contracts
+
+**The vector that allowed this attack has now been fixed on the Ethereum mainnet**
+
+## Introduction
+
+This is the Proof of Concept that I submitted to [Notional Finance](https://notional.finance) via [Immunefi](https://immunefi.com), a bug bounty platform.
+
+It runs a Foundry test at a particular block height to show that a small bug in the `AccountAction.nTokenRedeem` function allowed an attacker -- with the help of a flash loan from Aave -- to drain the contract of approximately $1.49M of value.
+
 # How to run this Proof of Concept
 
 ## Setup
